@@ -12,31 +12,57 @@
 #include <arpa/inet.h>
 #include <unistd.h>
 #include <stdlib.h>
+#include <errno.h>
+#include <string.h>
 
 int main(int argc, char *argv[])
 {
-    int len = 0;
     int client_socket;
     int result;
     char ch = 'A';
     struct sockaddr_in address;
+    int port = 9734;
+    char ip[] = "127.0.0.1";
 
     client_socket = socket(AF_INET, SOCK_STREAM, 0);
-    address.sin_family = AF_INET;
-    address.sin_addr.s_addr = inet_addr("127.0.0.1");
-    address.sin_port = htons(9090);
-    len = sizeof(address);
-    result = connect( client_socket, (struct sockaddr *)&address, len);
-    if(result == -1)
+    if(client_socket == -1)
     {
-        perror("client connect failed\n");
+        printf("client socket create fialed,error exit!");
+        printf("error: %s errno: %d\n", strerror(errno),errno);
         exit(1);
     }
 
+    printf("create socket successfully!\n");
+    memset(&address,0,sizeof(address));
+    printf("%d\n",__LINE__);
+    address.sin_family = AF_INET;
+    printf("%d\n",__LINE__);
+    address.sin_port = htons(port);
+    printf("%d\n",__LINE__);
+    inet_pton(AF_INET, ip, &address.sin_addr);
+    printf("%d\n",__LINE__);
+    
+    result = connect( client_socket, (struct sockaddr *)&address, sizeof(address));
+    printf("%d\n",__LINE__);
+    if(result == -1)
+    {
+        printf("%d\n",__LINE__);
+        printf("client connect failed!\n");
+        printf("%d\n",__LINE__);
+        printf("error: %s errno: %d\n", strerror(errno),errno);
+        printf("%d\n",__LINE__);
+        close(client_socket);
+        exit(1);
+    }
+
+    printf("%d\n",__LINE__);
+    printf("the client connected to %s:%d successfully!\n",ip,port);
     write(client_socket, &ch, 1);
     read(client_socket, &ch, 1);
     printf("server echo: %c", ch);
     close(client_socket);
+
+    printf("close socket and exit client!");
     exit(0);
 }
 

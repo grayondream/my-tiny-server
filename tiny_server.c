@@ -121,12 +121,13 @@ void ret_judge(int ret, char op, int abort, const char *msg)
  **/
 int startup(u_short *port)
 {
+    printf("in startup");
     int ret = 0;
     int server_socket = -1;
     int on = 1;
     struct sockaddr_in server;
 
-    server_socket = socket( PF_INET, SOCK_STREAM, 0);                                  //使用IPV4，数据流传输自动选择传输协议
+    server_socket = socket( AF_INET, SOCK_STREAM, 0);                                  //使用IPV4，数据流传输自动选择传输协议
     ret_judge( server_socket, '=', -1, "server socket create failed");
     memset(&server, 0, sizeof(server));
     
@@ -142,6 +143,7 @@ int startup(u_short *port)
     ret_judge( ret, '<', 0, "bind socket fialed");
     if(0 == *port)                                                                     //动态分配端口
     {
+        printf("there are any port which should be supplied,so allocate port dynamically\n");
         socklen_t server_len = sizeof(server);
         ret = getsockname(server_socket, (struct sockaddr *)&server, &server_len);
         ret_judge( ret, '=', -1, "allocate port dynamicaly failed");
@@ -149,6 +151,7 @@ int startup(u_short *port)
     }
 
     ret = listen( server_socket, 5);                                                   //监听端口
+    printf("listen on port:%d with 5 connected!\n", *port);
     ret_judge( ret, '<', 0, "listen port failed");
 
     return server_socket;
@@ -160,6 +163,7 @@ int startup(u_short *port)
  **/
 void accept_request(void *arg)
 {
+    printf("accept the data from client\n");
     int client_socket = (intptr_t)arg;
 
     char buf[1024];                             //所有数据缓冲区
@@ -611,14 +615,14 @@ int main(void)
 {
     int server_socket = -1;                     //服务端socket
     int client_socket = -1;                     //客户端socket
-    u_short server_port = 4040;                 //服务器端口号
+    u_short port = 4000;                 //服务器端口号
     struct sockaddr_in client;
     
     socklen_t client_len = sizeof(client);
     //pthread_t client_thread;
 
-    server_socket = startup(&server_port);             //开启服务并获取服务端socket
-    printf("server start on port %d\n",server_port);
+    server_socket = startup(&port);             //开启服务并获取服务端socket
+    printf("server start on port %d\n",port);
     while(1)
     {
         client_socket = accept( server_socket, (struct sockaddr *)&client, &client_len);
