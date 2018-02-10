@@ -17,7 +17,7 @@
 #include <sys/stat.h>
 #include <stdlib.h>
 #include <stdint.h>
-#include <pthread.h>
+//#include <pthread.h>
 #include <sys/wait.h>
 
 /**
@@ -32,6 +32,25 @@
  * 服务器名称（\r\n是为了兼容windows下的换行格式，暂时并未测试可能在linux下出现错误，之后可通过宏定义变成跨平台版本）
  **/
 #define SERVER_STRING   "Server: tiny_server/0.1\r\n"
+
+
+/**
+ * 函数声明
+ **/
+void error_exit(const char *msg);
+void ret_judge( int ret, char op, int abort, const char *msg);
+int startup(u_short *port);
+void accept_request(void *arg);
+size_t get_line(int client, char *buf, size_t size);
+void unknown_method(int client);
+void not_found(int client);
+void serve_file( int client, const char *filename);
+void headers(int client, const char *filename);
+void cat(int client, FILE *resource);
+void execute_cgi( int client, const char *path, const char *method, const char *query_string);
+void cannot_execute(int client);
+void bad_request(int client);
+
 
 /**
  *  函数功能：  程序异常终止，并输出相应的log信息
@@ -54,9 +73,9 @@ void error_exit(const char *msg)
  * 返回值：     无
  *              错误发生主程序返回1
  **/
-void ret_judge( int ret, char op, int abort, const char *msg)
+void ret_judge(int ret, char op, int abort, const char *msg)
 {
-    switch(op):
+    switch(op)
     {
     case '=':
         if(ret == abort)  
@@ -113,7 +132,7 @@ int startup(u_short *port)
     
     //初始化server
     server.sin_family = AF_INET;
-    server.sin_port = htos(*port);
+    server.sin_port = htons(*port);
     server.sin_addr.s_addr = htonl(INADDR_ANY);
     
     ret = setsockopt(server_socket, SOL_SOCKET, SO_REUSEADDR, &on, sizeof(on));        //设置通用socket，允许重用本地地址和端口
@@ -134,6 +153,7 @@ int startup(u_short *port)
 
     return server_socket;
 }
+
 /**
  * 函数功能：   处理客户端请求
  * 函数参数：   args    在线程创建时传递，这里是client_socket
@@ -176,12 +196,12 @@ void accept_request(void *arg)
     }
 
     i = 0;
-    while(IS_SPACE(buf[j]) && (j < len))
+    while(IS_SPACE(buf[j]) && (j < buf_size))
     {
         j ++;
     }
 
-    while((!IS_SPACE(buf[j])) && (i < sizeof(url) - 1) && (j < len))
+    while((!IS_SPACE(buf[j])) && (i < sizeof(url) - 1) && (j < buf_size))
     {
         url[i++] = buf[j++];
     }
@@ -189,17 +209,17 @@ void accept_request(void *arg)
     url[i] = '\0';
     if(strcasecmp( method, "GET") == 0)             //GET请求方法
     {
-        query_string = url;
-        while((*query_string != '?') && (*query_string != '\0'))
+        query_desc = url;
+        while((*query_desc != '?') && (*query_desc != '\0'))
         {
-            query_string ++;
+            query_desc ++;
         }
 
-        if(*query_string == '?')
+        if(*query_desc == '?')
         {
-            cgi = 1;
-            *query_string = '\0';
-            query_string ++;
+            cgi_flag = 1;
+            *query_desc = '\0';
+            query_desc ++;
         }
     }
 
@@ -211,9 +231,9 @@ void accept_request(void *arg)
 
     if(stat( path, &state) == -1)       //获取文件信息失败
     {
-        while((len > 0) && strcmp("\n", buf))
+        while((buf_size > 0) && strcmp("\n", buf))
         {
-            len = get_line( client_socket, buf, sizeof(buf));
+            buf_size = get_line( client_socket, buf, sizeof(buf));
         }
 
         not_found( client_socket);
@@ -227,16 +247,16 @@ void accept_request(void *arg)
         
         if((state.st_mode & S_IXGRP) || (state.st_mode & S_IXOTH))  //用户组拥有可执行权限或者其他组成员拥有可执行权限
         {
-            cgi = 1;
+            cgi_flag = 1;
         }
 
-        if(!cgi)
+        if(!cgi_flag)
         {
-            serve_file(client_socket, path)
+            serve_file(client_socket, path);
         }
         else
         {
-            execute_cgi( client_socket, path, method, query_string);
+            execute_cgi( client_socket, path, method, query_desc);
         }
     }
 
@@ -252,7 +272,7 @@ void accept_request(void *arg)
  **/
 size_t get_line(int client, char *buf, size_t size)
 {
-    int i = 0;
+    size_t i = 0;
     int len = 0;
     char ch = '\0';
     while((i < size - 1) && (ch != '\n'))       //最后一位作为字符串结束标志位'\0'
@@ -313,6 +333,7 @@ void unknown_method(int client)
     sprintf( buf, "</body></html>\r\n");
     send(client, buf, strlen(buf), 0);
 }
+
 /**
  * 函数功能：   对无法访问站点资源进行响应
  * 函数参数：   client  客户端socket
@@ -357,13 +378,13 @@ void serve_file( int client, const char *filename)
 
     buf[0] = 'A';                   //??
     buf[1] = '\0';
-    while( len > 1 && strcmp('\n' buf))
+    while( len > 1 && strcmp("\n", buf))
     {
         len = get_line( client, buf, sizeof(buf));
     }
 
     resource = fopen(filename, "r");            //只读模式打开文件
-    if(resouce == NULL)                 //文件错误
+    if(resource == NULL)                 //文件错误
     {
         not_found(client);
     }
@@ -424,15 +445,15 @@ void cat(int client, FILE *resource)
 void execute_cgi( int client, const char *path, const char *method, const char *query_string)
 {
     char buf[1024];
-    char cgi_in[2];
-    char cgi_out[2];
+    int cgi_in[2];
+    int cgi_out[2];
 
     int len = 0;
     int content_length = -1;
 
     pid_t pid = 0;
 
-    char ch =  '';
+    char ch =  ' ';
     int status;
 
     int i = 0;
@@ -477,13 +498,13 @@ void execute_cgi( int client, const char *path, const char *method, const char *
 
     if(pipe(cgi_out) < 0)
     {
-        connot_execute(client);
+        cannot_execute(client);
         return;
     }
 
     if((pid = fork()) < 0)
     {
-        connot_execute(client);
+        cannot_execute(client);
         return;
     }
 
@@ -510,7 +531,7 @@ void execute_cgi( int client, const char *path, const char *method, const char *
         }
         else
         {
-            sprintf(length_env, "CONTENT-LENGTH=%d", content-length);
+            sprintf(length_env, "CONTENT-LENGTH=%d", content_length);
             putenv(length_env);
         }
 
@@ -538,7 +559,7 @@ void execute_cgi( int client, const char *path, const char *method, const char *
 
         close(cgi_in[1]);
         close(cgi_out[0]);
-        waitpid(pis, &status, 0);
+        waitpid(pid, &status, 0);
     }
 }
 
@@ -594,16 +615,17 @@ int main(void)
     struct sockaddr_in client;
     
     socklen_t client_len = sizeof(client);
-    pthread_t client_thread;
+    //pthread_t client_thread;
 
-    server_socket = startup(&port);             //开启服务并获取服务端socket
+    server_socket = startup(&server_port);             //开启服务并获取服务端socket
     printf("server start on port %d\n",server_port);
     while(1)
     {
         client_socket = accept( server_socket, (struct sockaddr *)&client, &client_len);
         ret_judge( client_socket, '=', -1, "accept client failed");
-        int ret = pthread_create( &client_thread, NULL, (void *)accept_request, (void *)(intptr_t)client_socket);               //建立新线程管理客户端
-        ret_judge( ret, '!', 0, "pthread create fialed");
+        //int ret = pthread_create( &client_thread, NULL, (void *)accept_request, (void *)(intptr_t)client_socket);               //建立新线程管理客户端
+        //ret_judge( ret, '!', 0, "pthread create fialed");
+        accept_request(&client_socket);
     }
 
     close(server_socket);                       //关闭服务端socket
