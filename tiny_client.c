@@ -11,6 +11,7 @@
 #include <netinet/in.h>
 #include <arpa/inet.h>
 #include <unistd.h>
+#include <stdlib.h>
 
 int main(int argc, char *argv[])
 {
@@ -35,7 +36,7 @@ int main(int argc, char *argv[])
     write(client_socket, &ch, 1);
     read(client_socket, &ch, 1);
     printf("server echo: %c", ch);
-    close(client_client);
+    close(client_socket);
     exit(0);
 }
 
