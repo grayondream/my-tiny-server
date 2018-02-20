@@ -21,7 +21,7 @@ int main(int argc, char *argv[])
     int result;
     char ch = 'A';
     struct sockaddr_in address;
-    int port = 9734;
+    int port = 4000;
     char ip[] = "127.0.0.1";
 
     client_socket = socket(AF_INET, SOCK_STREAM, 0);
@@ -34,35 +34,26 @@ int main(int argc, char *argv[])
 
     printf("create socket successfully!\n");
     memset(&address,0,sizeof(address));
-    printf("%d\n",__LINE__);
     address.sin_family = AF_INET;
-    printf("%d\n",__LINE__);
     address.sin_port = htons(port);
-    printf("%d\n",__LINE__);
     inet_pton(AF_INET, ip, &address.sin_addr);
-    printf("%d\n",__LINE__);
     
     result = connect( client_socket, (struct sockaddr *)&address, sizeof(address));
-    printf("%d\n",__LINE__);
     if(result == -1)
     {
-        printf("%d\n",__LINE__);
         printf("client connect failed!\n");
-        printf("%d\n",__LINE__);
         printf("error: %s errno: %d\n", strerror(errno),errno);
-        printf("%d\n",__LINE__);
         close(client_socket);
         exit(1);
     }
 
-    printf("%d\n",__LINE__);
     printf("the client connected to %s:%d successfully!\n",ip,port);
     write(client_socket, &ch, 1);
     read(client_socket, &ch, 1);
     printf("server echo: %c", ch);
     close(client_socket);
 
-    printf("close socket and exit client!");
+    printf("close socket and exit client!\n");
     exit(0);
 }
 

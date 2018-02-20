@@ -127,6 +127,7 @@ int startup(u_short *port)
     int on = 1;
     struct sockaddr_in server;
 
+    printf("%d : startuo the server!\n", __LINE__);
     server_socket = socket( AF_INET, SOCK_STREAM, 0);                                  //使用IPV4，数据流传输自动选择传输协议
     ret_judge( server_socket, '=', -1, "server socket create failed");
     memset(&server, 0, sizeof(server));
@@ -154,6 +155,7 @@ int startup(u_short *port)
     printf("listen on port:%d with 5 connected!\n", *port);
     ret_judge( ret, '<', 0, "listen port failed");
 
+    printf("%d : start the server successfully!\n", __LINE__);
     return server_socket;
 }
 
@@ -163,7 +165,7 @@ int startup(u_short *port)
  **/
 void accept_request(void *arg)
 {
-    printf("accept the data from client\n");
+    printf("accept the data from client,begin to response\n");
     int client_socket = (intptr_t)arg;
 
     char buf[1024];                             //所有数据缓冲区
@@ -227,7 +229,8 @@ void accept_request(void *arg)
         }
     }
 
-    sprintf( path, "htdocs%s", url);
+    sprintf( path, "www%s", url);
+    printf("the path is :%s\n", path);
     if(path[strlen(path) - 1] == '/')
     {
         strcat(path, "index.html");
@@ -264,6 +267,7 @@ void accept_request(void *arg)
         }
     }
 
+    printf("response end!\n");
     close(client_socket);
 }
 
