@@ -1,1 +1,2 @@
 需要注意的是ntfs中的文件权限直接是777，无论是linux下创建的文件移动到ntfs目录下，还是ntfs目录直接创建，使用chmod也无法更改！，但是在linux ext文件系统下执行正常！
+文件夹下又三个目录，cgi_version和tiny版本基本类似，tiny版本的代码更加简介清晰直观。idea文件夹是clion的项目配置文件夹可以无视
